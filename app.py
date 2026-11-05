@@ -32,11 +32,11 @@ st.markdown(
 )
 
 
-# 2. Robust MobileNetV2 Reconstruction & Weights Mapping
+# 2. Robust Model Loading (Bypasses metadata errors & maps weights safely)
 @st.cache_resource
 def load_pineapple_model():
     try:
-        # Recreate the MobileNetV2 architecture programmatically
+        # Re-create MobileNetV2 architecture with explicitly named layers
         base_model = tf.keras.applications.MobileNetV2(
             input_shape=(224, 224, 3), 
             include_top=False, 
@@ -45,12 +45,12 @@ def load_pineapple_model():
         
         inputs = tf.keras.Input(shape=(224, 224, 3))
         x = base_model(inputs, training=False)
-        x = tf.keras.layers.GlobalAveragePooling2D()(x)
-        outputs = tf.keras.layers.Dense(6, activation="softmax")(x)
+        x = tf.keras.layers.GlobalAveragePooling2D(name='global_avg_pool')(x)
+        outputs = tf.keras.layers.Dense(6, activation="softmax", name='output_dense')(x)
         
-        model = tf.keras.Model(inputs, outputs)
+        model = tf.keras.Model(inputs, outputs, name='pineapple_mobilenetv2')
         
-        # Safely load weights from the .h5 file, bypassing layer deserialization bugs
+        # Safely map matching weights while skipping incompatible top layers or metadata
         model.load_weights("go_ananas_model.h5", by_name=True, skip_mismatch=True)
         return model
         
