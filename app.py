@@ -5,12 +5,13 @@ from PIL import Image
 
 # 1. Page Configuration & Custom Styling
 st.set_page_config(
-    page_title="Go Ananas! - AI Plant Doctor",
+    page_title="Go Ananas! - Plant Doctor",
     page_icon="🍍",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# Custom CSS for UI styling
 st.markdown(
     """
     <style>
@@ -32,30 +33,23 @@ st.markdown(
 )
 
 
-# 2. Robust Model Loading (Bypasses metadata errors & maps weights safely)
+# 2. Safe Model Loading
 @st.cache_resource
 def load_pineapple_model():
+    from tensorflow.keras.layers import InputLayer
+
+    class SafeInputLayer(InputLayer):
+        def __init__(self, *args, **kwargs):
+            kwargs.pop("batch_shape", None)
+            kwargs.pop("optional", None)
+            super().__init__(*args, **kwargs)
+
     try:
-        # Re-create MobileNetV2 architecture with explicitly named layers
-        base_model = tf.keras.applications.MobileNetV2(
-            input_shape=(224, 224, 3), 
-            include_top=False, 
-            weights=None
+        return tf.keras.models.load_model(
+            "go_ananas_model.h5", custom_objects={"InputLayer": SafeInputLayer}
         )
-        
-        inputs = tf.keras.Input(shape=(224, 224, 3))
-        x = base_model(inputs, training=False)
-        x = tf.keras.layers.GlobalAveragePooling2D(name='global_avg_pool')(x)
-        outputs = tf.keras.layers.Dense(6, activation="softmax", name='output_dense')(x)
-        
-        model = tf.keras.Model(inputs, outputs, name='pineapple_mobilenetv2')
-        
-        # Safely map matching weights while skipping incompatible top layers or metadata
-        model.load_weights("go_ananas_model.h5", by_name=True, skip_mismatch=True)
-        return model
-        
     except Exception as e:
-        st.error(f"Detailed Model Load Error: {e}")
+        print(f"Model load error: {e}")
         return None
 
 
@@ -107,7 +101,7 @@ recommendations = {
 # 3. Sidebar Configuration
 with st.sidebar:
     st.title("Go Ananas! 🍍")
-    st.markdown("### AI-Powered Pineapple Disease Detection")
+    st.markdown("### Pineapple Disease Detector")
     st.markdown("---")
     st.info(
         "Upload a photo of a pineapple leaf, crown, or fruit section to diagnose "
@@ -139,6 +133,7 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
+    # Two-column display layout
     col1, col2 = st.columns([1, 1], gap="large")
 
     with col1:
@@ -151,49 +146,59 @@ if uploaded_file is not None:
     with col2:
         st.subheader("🔍 Diagnostic Results")
 
-        with st.spinner("Analyzing plant tissue patterns..."):
-            img_resized = image_pil.resize((224, 224))
-
-            if img_resized.mode != "RGB":
-                img_resized = img_resized.convert("RGB")
-
-            img_array = np.array(img_resized, dtype=np.float32)
-            img_array = np.expand_dims(img_array, axis=0)
-            img_array = img_array / 255.0
-
-            if model is not None:
-                predictions = model.predict(img_array)[0]
-            else:
-                st.error("Model could not be loaded. Please check model file.")
-                predictions = np.zeros(len(class_labels))
-
-            predicted_idx = int(np.argmax(predictions))
-            predicted_class = class_labels[predicted_idx]
-            confidence_score = float(predictions[predicted_idx]) * 100
-
-        if predicted_class == "Healthy":
-            st.success(
-                f"**Diagnosis:** {predicted_class} ({confidence_score:.2f}% Confidence)"
+        if model is None:
+            st.error(
+                "⚠️ **System Alert:** The classification model could not be loaded "
+                "due to environment serialization differences. Please check your model file."
             )
         else:
-            st.error(
-                f"**Diagnosis:** {predicted_class} ({confidence_score:.2f}% Confidence)"
-            )
+            with st.spinner("Analyzing plant tissue patterns..."):
+                # Resize image to match model input shape (224x224)
+                img_resized = image_pil.resize((224, 224))
 
-        st.markdown("#### 💡 Recommended Action")
-        st.markdown(recommendations[predicted_class])
+                # Ensure image is in 3-channel RGB format
+                if img_resized.mode != "RGB":
+                    img_resized = img_resized.convert("RGB")
 
-        st.markdown("---")
-        st.subheader("📊 Confidence Breakdown Across All Classes")
+                # Convert PIL image to NumPy array and normalize to [0, 1] range
+                img_array = np.array(img_resized, dtype=np.float32)
+                img_array = np.expand_dims(img_array, axis=0)  # Shape: (1, 224, 224, 3)
+                img_array = img_array / 255.0  # Rescale pixel values
 
-        for idx, label in enumerate(class_labels):
-            prob = float(predictions[idx])
-            st.text(f"{label}: {prob * 100:.1f}%")
-            st.progress(prob)
+                # Real Model Prediction
+                predictions = model.predict(img_array)[0]
 
-        if show_debug:
+                predicted_idx = int(np.argmax(predictions))
+                predicted_class = class_labels[predicted_idx]
+                confidence_score = float(predictions[predicted_idx]) * 100
+
+            # Display Result Banner inside Column 2
+            if predicted_class == "Healthy":
+                st.success(
+                    f"**Diagnosis:** {predicted_class} ({confidence_score:.2f}% Confidence)"
+                )
+            else:
+                st.error(
+                    f"**Diagnosis:** {predicted_class} ({confidence_score:.2f}% Confidence)"
+                )
+
+            # Display Recommendation
+            st.markdown("#### 💡 Recommended Action")
+            st.markdown(recommendations[predicted_class])
+
+            # Class Breakdown Section
             st.markdown("---")
-            st.write("Raw Model Probabilities:", predictions)
+            st.subheader("📊 Confidence Breakdown Across All Classes")
+
+            for idx, label in enumerate(class_labels):
+                prob = float(predictions[idx])
+                st.text(f"{label}: {prob * 100:.1f}%")
+                st.progress(prob)
+
+            # Debug Output
+            if show_debug:
+                st.markdown("---")
+                st.write("Raw Model Probabilities:", predictions)
 
 else:
     st.info(
