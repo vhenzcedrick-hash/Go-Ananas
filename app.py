@@ -33,10 +33,10 @@ st.markdown(
 )
 
 
-# 2. Cache Model Loading (Diagnostic mode to display exact tracebacks if any load error occurs)
+# 2. Cache Model Loading (with safe InputLayer and Lambda layer compatibility patches)
 @st.cache_resource
 def load_pineapple_model():
-    from tensorflow.keras.layers import InputLayer
+    from tensorflow.keras.layers import InputLayer, Lambda
 
     class SafeInputLayer(InputLayer):
         def __init__(self, *args, **kwargs):
@@ -44,9 +44,22 @@ def load_pineapple_model():
             kwargs.pop("optional", None)
             super().__init__(*args, **kwargs)
 
-    return tf.keras.models.load_model(
-        "go_ananas_model.h5", custom_objects={"InputLayer": SafeInputLayer}
-    )
+    def dummy_lambda(*args, **kwargs):
+        return args[0]
+
+    try:
+        return tf.keras.models.load_model(
+            "go_ananas_model.h5",
+            custom_objects={
+                "InputLayer": SafeInputLayer,
+                "Lambda": Lambda,
+                "lambda_layer": dummy_lambda
+            },
+            compile=False
+        )
+    except Exception as e:
+        st.error(f"Detailed Model Load Error: {e}")
+        return None
 
 
 model = load_pineapple_model()
@@ -156,7 +169,11 @@ if uploaded_file is not None:
             img_array = img_array / 255.0  # Rescale pixel values
 
             # Run actual model predictions
-            predictions = model.predict(img_array)[0]
+            if model is not None:
+                predictions = model.predict(img_array)[0]
+            else:
+                st.error("Model could not be loaded. Please check model file.")
+                predictions = np.zeros(len(class_labels))
 
             predicted_idx = int(np.argmax(predictions))
             predicted_class = class_labels[predicted_idx]
