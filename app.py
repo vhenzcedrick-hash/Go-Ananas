@@ -64,33 +64,33 @@ class_labels = [
 # Actionable management advice
 recommendations = {
     "Healthy": (
-        "✅ **Crop Status: Optimal.** Continue standard irrigation and"
-        " balanced fertilization schedules. No immediate action required."
+        "✅ **Crop Status: Optimal.** Continue standard irrigation and "
+        "balanced fertilization schedules. No immediate action required."
     ),
     "Fruit Rot": (
-        "⚠️ **Action Required:** Remove infected fruits immediately to prevent"
-        " fungal spore dispersal. Apply approved bio-fungicides and avoid"
-        " overhead irrigation."
+        "⚠️ **Action Required:** Remove infected fruits immediately to prevent "
+        "fungal spore dispersal. Apply approved bio-fungicides and avoid "
+        "overhead irrigation."
     ),
     "Heart Rot": (
-        "⚠️ **Action Required:** Remove and destroy infected heart/whorl tissue."
-        " Apply copper-based fungicides and improve field drainage to prevent bacterial spread."
+        "⚠️ **Action Required:** Remove and destroy infected heart/whorl tissue. "
+        "Apply copper-based fungicides and improve field drainage to prevent bacterial spread."
     ),
     "Mealybug Wilt": (
-        "⚠️ **Action Required:** Quarantine affected plants. Apply systemic"
-        " insecticides or introduce natural predators (e.g., ladybugs) to control"
-        " mealybug populations."
+        "⚠️ **Action Required:** Quarantine affected plants. Apply systemic "
+        "insecticides or introduce natural predators (e.g., ladybugs) to control "
+        "mealybug populations."
     ),
     "Multi-Crown Disorder": (
-        "⚠️ **Action Required:** Monitor Calcium and Zinc: Deficiencies in"
-        " essential micronutrients have been linked to structural"
-        " malformations. Conduct routine soil and foliar tests to ensure proper"
-        " nutrient balance."
+        "⚠️ **Action Required:** Monitor Calcium and Zinc: Deficiencies in "
+        "essential micronutrients have been linked to structural "
+        "malformations. Conduct routine soil and foliar tests to ensure proper "
+        "nutrient balance."
     ),
     "Root Rot": (
-        "⚠️ **Action Required:** Improve field drainage immediately. Avoid"
-        " waterlogging, reduce watering frequency, and treat soil with"
-        " appropriate fungicides."
+        "⚠️ **Action Required:** Improve field drainage immediately. Avoid "
+        "waterlogging, reduce watering frequency, and treat soil with "
+        "appropriate fungicides."
     ),
 }
 
@@ -100,8 +100,8 @@ with st.sidebar:
     st.markdown("### AI-Powered Pineapple Disease Detection")
     st.markdown("---")
     st.info(
-        "Upload a photo of a pineapple leaf, crown, or fruit section to diagnose"
-        " health conditions instantly."
+        "Upload a photo of a pineapple leaf, crown, or fruit section to diagnose "
+        "health conditions instantly."
     )
     st.markdown("**Supported Conditions:**")
     st.markdown(
@@ -118,8 +118,8 @@ with st.sidebar:
 # 4. Main Interface Header
 st.title("🍍 Go Ananas! Disease Diagnostic Dashboard")
 st.markdown(
-    "Welcome to your smart agricultural assistant. Upload an image below to run"
-    " pattern recognition."
+    "Welcome to your smart agricultural assistant. Upload an image below to run "
+    "pattern recognition."
 )
 st.markdown("---")
 
@@ -173,4 +173,24 @@ if uploaded_file is not None:
             )
 
         # Display Recommendation
-        st.markdown("#### 💡 Recommended Action
+        st.markdown("#### 💡 Recommended Action")
+        st.markdown(recommendations[predicted_class])
+
+        # Class Breakdown Section
+        st.markdown("---")
+        st.subheader("📊 Confidence Breakdown Across All Classes")
+
+        for idx, label in enumerate(class_labels):
+            prob = float(predictions[idx])
+            st.text(f"{label}: {prob * 100:.1f}%")
+            st.progress(prob)
+
+        # Debug Output
+        if show_debug:
+            st.markdown("---")
+            st.write("Raw Model Probabilities:", predictions)
+
+else:
+    st.info(
+        "👈 Upload an image using the box above or via the sidebar to begin analysis."
+    )
