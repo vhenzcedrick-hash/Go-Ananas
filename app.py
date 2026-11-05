@@ -33,7 +33,7 @@ st.markdown(
 )
 
 
-# 2. Cache Model Loading (with safe InputLayer patch for older .h5 compatibility)
+# 2. Cache Model Loading (Diagnostic mode to display exact tracebacks if any load error occurs)
 @st.cache_resource
 def load_pineapple_model():
     from tensorflow.keras.layers import InputLayer
@@ -44,25 +44,21 @@ def load_pineapple_model():
             kwargs.pop("optional", None)
             super().__init__(*args, **kwargs)
 
-    try:
-        return tf.keras.models.load_model(
-            "go_ananas_model.h5", custom_objects={"InputLayer": SafeInputLayer}
-        )
-    except Exception as e:
-        print(f"Model load warning: {e}")
-        return None
+    return tf.keras.models.load_model(
+        "go_ananas_model.h5", custom_objects={"InputLayer": SafeInputLayer}
+    )
 
 
 model = load_pineapple_model()
 
 # Alphabetical order matching 6-class directory structure
 class_labels = [
-    "Fruit Rot",           # Index 0
-    "Healthy",             # Index 1
-    "Heart Rot",           # Index 2
-    "Mealybug Wilt",       # Index 3
-    "Multi-Crown Disorder",# Index 4
-    "Root Rot",            # Index 5
+    "Fruit Rot",            # Index 0
+    "Healthy",              # Index 1
+    "Heart Rot",            # Index 2
+    "Mealybug Wilt",        # Index 3
+    "Multi-Crown Disorder", # Index 4
+    "Root Rot",             # Index 5
 ]
 
 # Actionable management advice
@@ -160,11 +156,7 @@ if uploaded_file is not None:
             img_array = img_array / 255.0  # Rescale pixel values
 
             # Run actual model predictions
-            if model is not None:
-                predictions = model.predict(img_array)[0]
-            else:
-                st.error("Model could not be loaded. Please check model file.")
-                predictions = np.zeros(len(class_labels))
+            predictions = model.predict(img_array)[0]
 
             predicted_idx = int(np.argmax(predictions))
             predicted_class = class_labels[predicted_idx]
@@ -181,24 +173,4 @@ if uploaded_file is not None:
             )
 
         # Display Recommendation
-        st.markdown("#### 💡 Recommended Action")
-        st.markdown(recommendations[predicted_class])
-
-        # Class Breakdown Section
-        st.markdown("---")
-        st.subheader("📊 Confidence Breakdown Across All Classes")
-
-        for idx, label in enumerate(class_labels):
-            prob = float(predictions[idx])
-            st.text(f"{label}: {prob * 100:.1f}%")
-            st.progress(prob)
-
-        # Debug Output
-        if show_debug:
-            st.markdown("---")
-            st.write("Raw Model Probabilities:", predictions)
-
-else:
-    st.info(
-        "👈 Upload an image using the box above or via the sidebar to begin analysis."
-    )
+        st.markdown("#### 💡 Recommended Action
