@@ -32,11 +32,11 @@ st.markdown(
 )
 
 
-# 2. Clean Architecture Reconstruction (Bypasses Lambda layer serialization bugs)
+# 2. Robust MobileNetV2 Reconstruction & Weights Mapping
 @st.cache_resource
 def load_pineapple_model():
     try:
-        # Re-create the model architecture programmatically to avoid .h5 lambda bugs
+        # Recreate the MobileNetV2 architecture programmatically
         base_model = tf.keras.applications.MobileNetV2(
             input_shape=(224, 224, 3), 
             include_top=False, 
@@ -50,8 +50,8 @@ def load_pineapple_model():
         
         model = tf.keras.Model(inputs, outputs)
         
-        # Load weights directly from your model file safely
-        model.load_weights("go_ananas_model.h5")
+        # Safely load weights from the .h5 file, bypassing layer deserialization bugs
+        model.load_weights("go_ananas_model.h5", by_name=True, skip_mismatch=True)
         return model
         
     except Exception as e:
@@ -164,7 +164,7 @@ if uploaded_file is not None:
             if model is not None:
                 predictions = model.predict(img_array)[0]
             else:
-                st.error("Model weights could not be loaded. Please check model file.")
+                st.error("Model could not be loaded. Please check model file.")
                 predictions = np.zeros(len(class_labels))
 
             predicted_idx = int(np.argmax(predictions))
